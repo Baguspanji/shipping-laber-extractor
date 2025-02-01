@@ -160,7 +160,7 @@ class HomeController extends Controller
             'receiver_district' => $receiverAddresses[2],
             'receiver_village' => $receiverAddresses[3],
             'no_reference' => explode(' ', $document[$indexPesan + 6])[1],
-            'cod_check' => explode(':', $document[$indexPesan + 7])[1],
+            'cod_check' => explode(':', $document[$indexPesan + 7])[1] == 'Ya' ? true : false,
         ];
 
         return $shippingLabel;
