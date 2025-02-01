@@ -45,7 +45,7 @@ class HomeController extends Controller
             if ($checkExistAwb->contains('awb_number', $document['awb_number'])) {
                 break;
             }
-            $insertDocuments[] = OrderDelivery::insert($documents);
+            $insertDocuments[] = OrderDelivery::insert($document);
         }
 
         if (count($insertDocuments) == 0) {
