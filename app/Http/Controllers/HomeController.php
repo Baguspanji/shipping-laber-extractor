@@ -7,6 +7,13 @@ use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
+    protected $extractService;
+
+    public function __construct()
+    {
+        $this->extractService = new \App\Services\ExtractService();
+    }
+
     public function index()
     {
         $datas = OrderDelivery::all();
@@ -14,7 +21,7 @@ class HomeController extends Controller
     }
 
     // upload file
-    public function upload(Request $request)
+    public function uploadResi(Request $request)
     {
         $request->validate([
             'file' => 'required|mimes:pdf|max:2048'
@@ -23,21 +30,32 @@ class HomeController extends Controller
         $image = $request->file('file');
         $image_uploaded = $image->store('upload');
 
+        // $rawdata = file_get_contents(storage_path('app/public/' . $image_uploaded));
+        // if ($rawdata === false) {
+        //     die('Unable to get the content of the file: ' . storage_path('app/public/' . $image_uploaded));
+        // }
+
+        // // configuration parameters for parser
+        // $cfg = [
+        //     'ignore_filter_errors' => true,
+        // ];
+        // $pdf = new \Com\Tecnick\Pdf\Parser\Parser($cfg);
+        // $data = $pdf->parse($rawdata);
+        // return $this->convert_from_latin1_to_utf8_recursively($data);
+
         $parser = new \Smalot\PdfParser\Parser();
         $pdf = $parser->parseFile(storage_path('app/public/' . $image_uploaded));
-
-        // or extract the text of a specific page (in this case the first page)
-        // $document = $pdf->getPages()[2]->getText();
-        // $document = explode("\n", $document);
-        // $document = $this->extractDetail($document);
 
         $documents = [];
         for ($i = 0; $i < count($pdf->getPages()); $i++) {
             $document = $pdf->getPages()[$i]->getText();
-            $document = $this->extractDetail($document);
+            // return $document = nl2br($document);
+            $document = $this->extractService->extractSPX($document);
 
             $documents[] = $document;
         }
+
+        return $documents;
 
         $checkExistAwb = OrderDelivery::whereIn('awb_number', array_column($documents, 'awb_number'))->get();
         $insertDocuments = [];
@@ -53,6 +71,22 @@ class HomeController extends Controller
         }
 
         return redirect()->back()->with('success', 'Awb Number successfully uploaded');
+    }
+
+    public function convert_from_latin1_to_utf8_recursively($dat)
+    {
+        if (is_string($dat)) {
+            return utf8_encode($dat);
+        } elseif (is_array($dat)) {
+            $ret = [];
+            foreach ($dat as $i => $d) $ret[$i] = self::convert_from_latin1_to_utf8_recursively($d);
+            return $ret;
+        } elseif (is_object($dat)) {
+            foreach ($dat as $i => $d) $dat->$i = self::convert_from_latin1_to_utf8_recursively($d);
+            return $dat;
+        } else {
+            return $dat;
+        }
     }
 
     private function extractDetail($document)
